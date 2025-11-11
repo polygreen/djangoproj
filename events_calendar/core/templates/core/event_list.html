@@ -1,0 +1,63 @@
+{% extends "core/base.html" %}
+{% load dict_extras %}
+
+{% block title %}All Events{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:900px; margin:2rem auto;">
+    <h1>All Events</h1>
+    
+    <p>
+        <a href="{% url 'calendar' %}">Back to Calendar</a>
+    </p>
+
+    {% if events %}
+        <table style="width:100%; border-collapse:collapse; margin-top:1rem; font-size:0.95rem;">
+            <thead style="background:#f8f9fa; text-align:left;">
+                <tr>
+                    <th style="padding:0.75rem; border-bottom:2px solid #ddd;">Title</th>
+                    <th style="padding:0.75rem; border-bottom:2px solid #ddd;">Date & Time</th>
+                    <th style="padding:0.75rem; border-bottom:2px solid #ddd;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:0.75rem;">
+                        <strong>{{ event.title }}</strong>
+                        {% if event.description %}
+                            <br><small style="color:#666;">{{ event.description|truncatewords:10 }}</small>
+                        {% endif %}
+                    </td>
+                    <td style="padding:0.75rem;">
+                        {{ event.start_date|date:"M j, Y" }}
+                        <br><small style="color:#555;">{{ event.start_date|date:"g:i A" }}</small>
+                        {% if event.end_date %}
+                            → {{ event.end_date|date:"g:i A" }}
+                        {% endif %}
+                    </td>
+                    <td style="padding:0.75rem;">
+                        <a href="{% url 'edit_event' event.id %}" style="color:#007bff; margin-right:1rem; font-size:0.9rem;">Edit</a>
+                        <a href="{% url 'delete_event' event.id %}" 
+                           style="color:#dc3545; font-size:0.9rem;" 
+                           onclick="return confirm('Delete {{ event.title|escapejs }}?')">
+                           Delete
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" style="padding:1rem; color:#888; font-style:italic;">
+                        No events yet. <a href="{% url 'calendar' %}">Add one on the calendar!</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="color:#888; font-style:italic;">
+            No events found. <a href="{% url 'calendar' %}">Add your first event!</a>
+        </p>
+    {% endif %}
+</div>
+{% endblock %}

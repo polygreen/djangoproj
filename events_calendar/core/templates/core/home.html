@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<div class="card">
+
+<h1>Home</h1>
+<p>This page shows a counter stored on the server using your session.</p>
+<p><strong>Current count:</strong> {{ count }}</p>
+<!-- This form triggers a POST to increment the count server-side -->
+<form method="post" action="{% url 'increment' %}">
+{% csrf_token %}
+<button type="submit">Increment</button>
+</form>
+<p style="margin-top: .75rem; color: #666; font-size: 0.95rem;">
+Why POST? Changing server state must not be done via GET.
+Why redirect? After POST we redirect back here, so reloading the page doesn’t
+double-increment.
+</p>
+</div>
+{% endblock %}
