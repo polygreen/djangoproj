@@ -40,6 +40,7 @@ def increment(request):
     current = _get_count(request.session)
     _set_count(request.session, current + 1)
     return redirect("home") # Post-Redirect-Get avoids double submits on refresh
+
 def calendar_view(request, year=None, month=None):
     now = datetime.now()
     year  = int(year)  if year  else now.year
@@ -82,12 +83,17 @@ def calendar_view(request, year=None, month=None):
     if request.method == 'POST':
         title = request.POST.get('title')
         start_date = request.POST.get('start_date')
+        repeat = request.POST.get('repeat', 'none')
         if title and start_date:
             Event.objects.create(
                 title=title,
-                start_date=start_date
+                start_date=start_date,
+                repeat=repeat,
+                is_birthday=(repeat == 'yearly')
             )
         return redirect('calendar_month', year=year, month=month)
+        # If form invalid, stay on current page
+        return redirect(request.path)
 
     # Build calendar
     cal = monthcalendar(year, month)
@@ -133,7 +139,8 @@ def edit_event(request, event_id):
         except ValueError:
             # If format is wrong, fallback or show error
             pass
-
+        event.repeat = request.POST.get('repeat', 'none')
+        event.is_birthday = 'is_birthday' in request.POST
         event.save()
         return redirect('calendar_month', year=event.start_date.year, month=event.start_date.month)
     
