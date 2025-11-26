@@ -1,0 +1,59 @@
+{% extends "core/base.html" %}
+{% block title %}Manage Categories{% endblock %}
+
+{% block content %}
+<div class="container my-5" style="max-width: 800px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Categories</h1>
+        <a href="{% url 'calendar' %}" class="btn btn-secondary">Back to Calendar</a>
+    </div>
+
+    <!-- Add New Category -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Add New Category</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                <div class="col-md-6">
+                    <input type="text" name="name" class="form-control" placeholder="Name (e.g., Work, Holiday)" required>
+                </div>
+                <div class="col-md-4">
+                    <input type="color" name="color" value="#007bff" class="form-control form-control-color" title="Choose color">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success w-100">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- List of Categories -->
+    <h4>Current Categories ({{ categories.count }})</h4>
+    {% if categories %}
+        <div class="row">
+            {% for cat in categories %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3" style="width:50px; height:50px; background:{{ cat.color }}; border-radius:8px;"></div>
+                                <strong class="fs-5">{{ cat.name }}</strong>
+                            </div>
+                            <form method="post" action="{% url 'delete_category' cat.id %}" 
+                                style="display:inline;" 
+                                onsubmit="return confirm('Delete {{ cat.name }} and remove from all events?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">No categories yet. Add one above!</p>
+    {% endif %}
+</div>
+{% endblock %}

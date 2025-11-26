@@ -12,4 +12,7 @@ urlpatterns = [
     path('event/delete/<int:event_id>/', views.delete_event, name='delete_event'),
     # Event list
     path('events/', views.event_list, name='event_list'),
+    # Categories
+    path('categories/', views.category_list, name='category_list'),
+    path('categories/delete/<int:pk>/', views.delete_category, name='delete_category'),
 ]

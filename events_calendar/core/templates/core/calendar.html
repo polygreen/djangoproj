@@ -12,6 +12,7 @@
         <a href="{% url 'calendar_month' next_year next_month %}" class="btn">Next</a>
         <a href="{% url 'calendar' %}" class="btn">Today</a>
         <a href="{% url 'event_list' %}" class="btn">All Events</a>
+        <a href="{% url 'category_list' %}" class="btn btn-outline-info">Categories</a>
     </div>
 
     <!-- Add Event Form -->
@@ -26,12 +27,21 @@
                 <div class="col-12 col-md-4">
                     <input type="datetime-local" name="start_date" class="form-control" required>
                 </div>
+                 <div class="col-12 col-md-3">
+                    <select name="category" class="form-select">
+                        <option value="">-- No category --</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="col-12 col-md-2">
                     <select name="repeat" class="form-select">
                         <option value="none">No repeat</option>
                         <option value="yearly">Yearly 🎂</option>
                         <option value="monthly">Monthly</option>
                         <option value="weekly">Weekly</option>
+                        <option value="daily">Daily</option>
                     </select>
                 </div>
                 <div class="col-12 col-md-3">
@@ -67,6 +77,7 @@
                                             {% if ev.is_birthday %}🎂 {% endif %}
                                             {% if ev.repeat != 'none' %}🔄{% endif %}
                                             {{ ev.title|truncatechars:20 }}
+                                            {% if ev.category %} [{{ ev.category.name }}] {% endif %}
                                         </a>
 
                                         <!-- Desktop only: Edit/Delete on hover -->

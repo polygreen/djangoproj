@@ -1,9 +1,13 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_http_methods
-from datetime import datetime
+from datetime import datetime, timedelta
 from calendar import monthcalendar, month_name
-from .models import Event
+from .models import Event, Category
 from django.utils import timezone
+from dateutil.relativedelta import relativedelta
+from dateutil.rrule import rrule, DAILY, WEEKLY, MONTHLY, YEARLY
+from django.contrib import messages
+from django.views.decorators.http import require_POST
 
 def _get_count(session):
     """
@@ -41,70 +45,55 @@ def increment(request):
     _set_count(request.session, current + 1)
     return redirect("home") # Post-Redirect-Get avoids double submits on refresh
 
-def calendar_view(request, year=None, month=None):
-    now = datetime.now()
-    year  = int(year)  if year  else now.year
-    month = int(month) if month else now.month
 
-    # Build a 6×7 grid (some months need 6 rows)
-    cal = monthcalendar(year, month)
+def get_events_for_month(year, month):
+    events = Event.objects.all()
+    start_of_month = datetime(year, month, 1)
+    if month == 12:
+        end_of_month = datetime(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_of_month = datetime(year, month + 1, 1) - timedelta(days=1)
 
-    # Gather events for this month
-    events = Event.objects.filter(
-        start_date__year=year,
-        start_date__month=month
-    )
+    displayed = {}
+    for event in events:
+        dates = [event.start_date.date()]
+        if event.repeat != 'none':
+            freq_map = {'daily': DAILY, 'weekly': WEEKLY, 'monthly': MONTHLY, 'yearly': YEARLY}
+            freq = freq_map[event.repeat]
+            dtstart_utc = event.start_date.astimezone(timezone.utc).replace(tzinfo=None)
+            until_utc = (end_of_month + timedelta(days=730)).astimezone(timezone.utc).replace(tzinfo=None)
+            rule = rrule(freq, dtstart=dtstart_utc, until=until_utc)
+            dates = [dt.date() for dt in rule if start_of_month.date() <= dt.date() <= end_of_month.date()]
 
-    # Group by day
-    events_by_day = {}
-    for e in events:
-        day = e.start_date.day
-        events_by_day.setdefault(day, []).append(e)
+        for d in dates:
+            day = d.day
+            displayed.setdefault(day, []).append(event)
+    return displayed
 
-    context = {
-        'year': year,
-        'month': month,
-        'month_name': month_name[month],
-        'calendar': cal,
-        'events_by_day': events_by_day,
-        'prev_year': year - (1 if month == 1 else 0),
-        'prev_month': 12 if month == 1 else month - 1,
-        'next_year': year + (1 if month == 12 else 0),
-        'next_month': 1 if month == 12 else month + 1,
-    }
-    return render(request, 'core/calendar.html', context)
 
 def calendar_view(request, year=None, month=None):
     now = timezone.localtime()
-    year  = int(year)  if year  else now.year
+    year = int(year) if year else now.year
     month = int(month) if month else now.month
 
     # Handle form submission
     if request.method == 'POST':
         title = request.POST.get('title')
-        start_date = request.POST.get('start_date')
+        start_date_str = request.POST.get('start_date')
+        category_id = request.POST.get('category') or None
         repeat = request.POST.get('repeat', 'none')
-        if title and start_date:
+
+        if title and start_date_str:
             Event.objects.create(
                 title=title,
-                start_date=start_date,
-                repeat=repeat,
-                is_birthday=(repeat == 'yearly')
+                start_date=start_date_str,
+                category_id=category_id,
+                repeat=repeat
             )
         return redirect('calendar_month', year=year, month=month)
-        # If form invalid, stay on current page
-        return redirect(request.path)
 
-    # Build calendar
     cal = monthcalendar(year, month)
-    events = Event.objects.filter(
-        start_date__year=year,
-        start_date__month=month
-    )
-    events_by_day = {}
-    for e in events:
-        day = e.start_date.day
-        events_by_day.setdefault(day, []).append(e)
+    events_by_day = get_events_for_month(year, month)
 
     context = {
         'year': year,
@@ -119,6 +108,7 @@ def calendar_view(request, year=None, month=None):
         'today_day': now.day,
         'today_month': now.month,
         'today_year': now.year,
+        'categories': Category.objects.all(),  
     }
     return render(request, 'core/calendar.html', context)
 
@@ -139,12 +129,18 @@ def edit_event(request, event_id):
         except ValueError:
             # If format is wrong, fallback or show error
             pass
+        event.category_id = request.POST.get('category') or None
         event.repeat = request.POST.get('repeat', 'none')
         event.is_birthday = 'is_birthday' in request.POST
         event.save()
         return redirect('calendar_month', year=event.start_date.year, month=event.start_date.month)
+    context = {
+        'event': event,
+        'categories': Category.objects.all(),       
+        'repeat_choices': Event.REPEAT_CHOICES,     
+    }
+    return render(request, 'core/edit_event.html', context)
     
-    return render(request, 'core/edit_event.html', {'event': event})
 
 # Delete Event
 def delete_event(request, event_id):
@@ -157,3 +153,25 @@ def delete_event(request, event_id):
 def event_list(request):
     events = Event.objects.all().order_by('start_date')
     return render(request, 'core/event_list.html', {'events': events})
+
+#category list
+def category_list(request):
+    if request.method == 'POST':
+        name = request.POST['name'].strip()
+        color = request.POST['color']
+        if name:
+            Category.objects.create(name=name, color=color)
+        return redirect('category_list')
+
+    categories = Category.objects.all().order_by('name')
+    return render(request, 'core/category_list.html', {'categories': categories})
+
+# Delete Category
+@require_POST
+def delete_category(request, pk):
+    category = get_object_or_404(Category, id=pk)
+    category_name = category.name
+    category.delete()
+    messages.success(request, f'Category "{category_name}" deleted.')
+    return redirect('category_list')
+   # return render(request, 'core/delete_category.html', {'category': category})

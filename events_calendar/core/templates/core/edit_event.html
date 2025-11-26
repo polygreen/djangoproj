@@ -19,12 +19,25 @@
                        value="{{ event.start_date|date:'Y-m-d\TH:i' }}" class="form-control" required>
             </div>
             <div class="mb-3">
+                <label class="form-label"><strong>Category</strong></label>
+                <select name="category" class="form-select">
+                    <option value="">-- No category --</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.id }}" 
+                            {% if event.category.id == cat.id %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
                 <label class="form-label">Repeat</label>
                 <select name="repeat" class="form-select">
                     <option value="none" {% if event.repeat == 'none' %}selected{% endif %}>No repeat</option>
                     <option value="yearly" {% if event.repeat == 'yearly' %}selected{% endif %}>Every year (birthday)</option>
                     <option value="monthly" {% if event.repeat == 'monthly' %}selected{% endif %}>Every month</option>
                     <option value="weekly" {% if event.repeat == 'weekly' %}selected{% endif %}>Every week</option>
+                    <option value="daily" {% if event.repeat == 'daily' %}selected{% endif %}>Every week</option>
                 </select>
             </div>
             <div class="mb-3 form-check">
