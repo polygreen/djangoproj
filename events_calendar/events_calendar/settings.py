@@ -122,3 +122,9 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Twilio WhatsApp Settings
+TWILIO_WHATSAPP_NUMBER = "whatsapp:+14155238886"  # sandbox number
+TWILIO_ACCOUNT_SID = "***" #"your_account_sid_here"
+TWILIO_AUTH_TOKEN = "***"  #"your_auth_token_here"
+YOUR_WHATSAPP_NUMBER = "whatsapp:+***"  # ← YOUR phone number (with country code)

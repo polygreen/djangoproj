@@ -4,7 +4,12 @@
 
 {% block content %}
 <div class="calendar-container">
-    <h1>{{ month_name }} {{ year }}</h1>
+    <h1>
+        {{ month_name }} {{ year }}
+        {% if selected_category %}
+            <small class="text-muted">→ {{ selected_category.name }}</small>
+        {% endif %}
+    </h1>
 
     <!-- Navigation -->
     <div class="nav-links" style="margin-bottom:1rem;">
@@ -15,6 +20,30 @@
         <a href="{% url 'category_list' %}" class="btn btn-outline-info">Categories</a>
     </div>
 
+    <!-- Category Filter -->
+    <div class="mb-4">
+        <form method="get" class="row g-3 align-items-center">
+            <div class="col-auto">
+                <label class="form-label mb-0 fw-bold">Show:</label>
+            </div>
+            <div class="col-auto">
+                <select name="category" class="form-select" onchange="this.form.submit()">
+                    <option value="">All events</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.id }}"
+                            {% if selected_category and cat.id == selected_category.id %}selected{% endif %}
+                            style="background:{{ cat.color }}; color:white;">
+                            {{ cat.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <a href="?category=" class="btn btn-outline-secondary btn-sm">Clear</a>
+            </div>
+        </form>
+    </div>
+    
     <!-- Add Event Form -->
     <div class="card mb-4 shadow-sm">
         <div class="card-body">

@@ -46,37 +46,34 @@ def increment(request):
     return redirect("home") # Post-Redirect-Get avoids double submits on refresh
 
 
-def get_events_for_month(year, month):
-    events = Event.objects.all()
+def get_events_for_month(year, month, events=None):
+    if events is None:
+        events = Event.objects.all()
+
     start_of_month = datetime(year, month, 1)
-    if month == 12:
-        end_of_month = datetime(year + 1, 1, 1) - timedelta(days=1)
-    else:
-        end_of_month = datetime(year, month + 1, 1) - timedelta(days=1)
+    end_of_month = (datetime(year + 1, 1, 1) - timedelta(days=1)) if month == 12 else (datetime(year, month + 1, 1) - timedelta(days=1))
 
     displayed = {}
     for event in events:
         dates = [event.start_date.date()]
         if event.repeat != 'none':
             freq_map = {'daily': DAILY, 'weekly': WEEKLY, 'monthly': MONTHLY, 'yearly': YEARLY}
-            freq = freq_map[event.repeat]
             dtstart_utc = event.start_date.astimezone(timezone.utc).replace(tzinfo=None)
             until_utc = (end_of_month + timedelta(days=730)).astimezone(timezone.utc).replace(tzinfo=None)
-            rule = rrule(freq, dtstart=dtstart_utc, until=until_utc)
-            dates = [dt.date() for dt in rule if start_of_month.date() <= dt.date() <= end_of_month.date()]
+            rule = rrule(freq_map[event.repeat], dtstart=dtstart_utc, until=until_utc)
+            dates = [dt.date() for dt in rule 
+                    if start_of_month.date() <= dt.date() <= end_of_month.date()]
 
         for d in dates:
-            day = d.day
-            displayed.setdefault(day, []).append(event)
+            displayed.setdefault(d.day, []).append(event)
     return displayed
-
 
 def calendar_view(request, year=None, month=None):
     now = timezone.localtime()
     year = int(year) if year else now.year
     month = int(month) if month else now.month
 
-    # Handle form submission
+    # Handle form submission (add event)
     if request.method == 'POST':
         title = request.POST.get('title')
         start_date_str = request.POST.get('start_date')
@@ -92,8 +89,23 @@ def calendar_view(request, year=None, month=None):
             )
         return redirect('calendar_month', year=year, month=month)
 
+    # Category filter from URL
+    category_id = request.GET.get('category')
+    selected_category = None
+    if category_id:
+        try:
+            selected_category = Category.objects.get(id=category_id)
+        except Category.DoesNotExist:
+            pass
+
+    # Get events (filtered if category selected)
+    base_events = Event.objects.all()
+    if selected_category:
+        base_events = base_events.filter(category=selected_category)
+
+    events_by_day = get_events_for_month(year, month, base_events)  # pass filtered events
+
     cal = monthcalendar(year, month)
-    events_by_day = get_events_for_month(year, month)
 
     context = {
         'year': year,
@@ -108,7 +120,8 @@ def calendar_view(request, year=None, month=None):
         'today_day': now.day,
         'today_month': now.month,
         'today_year': now.year,
-        'categories': Category.objects.all(),  
+        'categories': Category.objects.all(),
+        'selected_category': selected_category,
     }
     return render(request, 'core/calendar.html', context)
 
@@ -151,8 +164,27 @@ def delete_event(request, event_id):
 
 # Event list
 def event_list(request):
+    # Get selected category from URL (e.g. ?category=3)
+    category_id = request.GET.get('category')
+    
+    # Base queryset
     events = Event.objects.all().order_by('start_date')
-    return render(request, 'core/event_list.html', {'events': events})
+    
+    # Filter by category if selected
+    selected_category = None
+    if category_id:
+        events = events.filter(category_id=category_id)
+        try:
+            selected_category = Category.objects.get(id=category_id)
+        except Category.DoesNotExist:
+            pass
+
+    context = {
+        'events': events,
+        'categories': Category.objects.all(),
+        'selected_category': selected_category,
+    }
+    return render(request, 'core/event_list.html', context)
 
 #category list
 def category_list(request):
