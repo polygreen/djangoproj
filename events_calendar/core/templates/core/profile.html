@@ -1,0 +1,13 @@
+{% extends "core/base.html" %}
+{% block content %}
+<div class="container my-5">
+    <h1>Hi, {{ user.username }}!</h1>
+    <form method="post">
+        {% csrf_token %}
+        <label>WhatsApp Number (for reminders):</label>
+        <input type="text" name="whatsapp" value="{{ user.profile.whatsapp_number|default:'' }}" 
+               class="form-control" placeholder="whatsapp:+1234567890">
+        <button type="submit" class="btn btn-success mt-3">Save</button>
+    </form>
+</div>
+{% endblock %}

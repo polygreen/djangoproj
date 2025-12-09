@@ -125,6 +125,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Twilio WhatsApp Settings
 TWILIO_WHATSAPP_NUMBER = "whatsapp:+14155238886"  # sandbox number
-TWILIO_ACCOUNT_SID = "***" #"your_account_sid_here"
-TWILIO_AUTH_TOKEN = "***"  #"your_auth_token_here"
-YOUR_WHATSAPP_NUMBER = "whatsapp:+***"  # ← YOUR phone number (with country code)
+TWILIO_ACCOUNT_SID = "" #"your_account_sid_here"
+TWILIO_AUTH_TOKEN = ""  #"your_auth_token_here"
+YOUR_WHATSAPP_NUMBER = "whatsapp:+"  # ← YOUR phone number (with country code)
+
+# Login settings 
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'
+LOGIN_URL = '/accounts/login/'

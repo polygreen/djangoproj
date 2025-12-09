@@ -16,8 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.contrib.auth import views as auth_views
+from core import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')), # include our app's URL patterns at the site root
+
+    # LOGIN SYSTEM
+    path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
+    path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('accounts/signup/', views.signup, name='signup'),
+    path('accounts/profile/', views.profile, name='profile'),  
 ]

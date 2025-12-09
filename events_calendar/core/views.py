@@ -2,12 +2,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from datetime import datetime, timedelta
 from calendar import monthcalendar, month_name
-from .models import Event, Category
+from .models import Event, Category, Profile
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, DAILY, WEEKLY, MONTHLY, YEARLY
 from django.contrib import messages
 from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login
 
 def _get_count(session):
     """
@@ -48,7 +51,7 @@ def increment(request):
 
 def get_events_for_month(year, month, events=None):
     if events is None:
-        events = Event.objects.all()
+        events = Event.objects.filter(owner=request.user)
 
     start_of_month = datetime(year, month, 1)
     end_of_month = (datetime(year + 1, 1, 1) - timedelta(days=1)) if month == 12 else (datetime(year, month + 1, 1) - timedelta(days=1))
@@ -68,13 +71,14 @@ def get_events_for_month(year, month, events=None):
             displayed.setdefault(d.day, []).append(event)
     return displayed
 
+@login_required
 def calendar_view(request, year=None, month=None):
     now = timezone.localtime()
     year = int(year) if year else now.year
     month = int(month) if month else now.month
 
     # Handle form submission (add event)
-    if request.method == 'POST':
+    if request.method == 'POST'and request.user.is_authenticated:
         title = request.POST.get('title')
         start_date_str = request.POST.get('start_date')
         category_id = request.POST.get('category') or None
@@ -85,10 +89,14 @@ def calendar_view(request, year=None, month=None):
                 title=title,
                 start_date=start_date_str,
                 category_id=category_id,
-                repeat=repeat
+                repeat=repeat,
+                owner=request.user
             )
         return redirect('calendar_month', year=year, month=month)
-
+    
+    if request.method == 'POST':
+        return redirect('login')
+    
     # Category filter from URL
     category_id = request.GET.get('category')
     selected_category = None
@@ -99,7 +107,7 @@ def calendar_view(request, year=None, month=None):
             pass
 
     # Get events (filtered if category selected)
-    base_events = Event.objects.all()
+    base_events = Event.objects.filter(owner=request.user)
     if selected_category:
         base_events = base_events.filter(category=selected_category)
 
@@ -168,7 +176,7 @@ def event_list(request):
     category_id = request.GET.get('category')
     
     # Base queryset
-    events = Event.objects.all().order_by('start_date')
+    events = Event.objects.filter(owner=request.user).order_by('start_date')
     
     # Filter by category if selected
     selected_category = None
@@ -207,3 +215,26 @@ def delete_category(request, pk):
     messages.success(request, f'Category "{category_name}" deleted.')
     return redirect('category_list')
    # return render(request, 'core/delete_category.html', {'category': category})
+
+@login_required
+def profile(request):
+    profile, created = Profile.objects.get_or_create(user=request.user)
+
+    if request.method == 'POST':
+        request.user.profile.whatsapp_number = request.POST['whatsapp']
+        request.user.profile.save()
+        return redirect('profile')
+    
+    return render(request, 'core/profile.html', {'profile': profile})
+
+def signup(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            Profile.objects.create(user=user)
+            login(request, user)  # log them in immediately
+            return redirect('calendar')
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/signup.html', {'form': form})

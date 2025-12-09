@@ -1,5 +1,7 @@
-from django.urls import path
-from . import views # import our view functions
+from django.urls import path,include
+from django.contrib.auth import views as auth_views
+from core import views
+
 urlpatterns = [
     path("", views.home, name="home"), # "/" -> home page
     path("about/", views.about, name="about"), # "/about/" -> about page
@@ -15,4 +17,5 @@ urlpatterns = [
     # Categories
     path('categories/', views.category_list, name='category_list'),
     path('categories/delete/<int:pk>/', views.delete_category, name='delete_category'),
+    
 ]
